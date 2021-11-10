@@ -6,6 +6,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 // firebase token verify setup
 const admin = require("firebase-admin");
+const e = require("express");
 
 const serviceAccount = JSON.parse(process.env.FIREBASEAUTH);
 
@@ -13,10 +14,14 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 async function verifyUserToken(req, res, next) {
-  if (req.headers?.authorization.startsWith("Bearer ")) {
+  if (req.headers?.authorization?.startsWith("Bearer ")) {
     const userToken = req.headers.authorization.split(" ")[1];
-    const decodedUser = await admin.auth().verifyIdToken(userToken);
-    req.decodedEmail = decodedUser.email;
+    try {
+      const decodedUser = await admin.auth().verifyIdToken(userToken);
+      req.decodedEmail = decodedUser.email;
+    } catch (error) {
+      console.log(error);
+    }
   }
   next();
 }
@@ -42,6 +47,38 @@ async function run() {
         res.send(saveUsers);
       } else {
         res.send(401);
+      }
+    });
+    app.put("/makeadmin", verifyUserToken, async (req, res) => {
+      const userEmail = req.body.email;
+      const reqUserEmail = req.decodedEmail;
+      const findUser = await usersCollection.findOne({
+        email: reqUserEmail,
+      });
+      if (findUser.role === "admin") {
+        const filter = { email: userEmail };
+        const updateDoc = { $set: { role: "admin" } };
+        const MakeuserAdmin = await usersCollection.updateOne(
+          filter,
+          updateDoc
+        );
+        res.send(MakeuserAdmin);
+      } else {
+        res.send(401);
+      }
+    });
+    app.get("/checkadmin", verifyUserToken, async (req, res) => {
+      const userEmail = req.decodedEmail;
+      console.log("jwt auth", userEmail);
+      const adminResult = await usersCollection.findOne({
+        email: userEmail,
+      });
+      if (adminResult) {
+        if (adminResult.role === "admin") {
+          res.send({ admin: true });
+        } else {
+          res.send({ admin: "not have rule" });
+        }
       }
     });
   } finally {
