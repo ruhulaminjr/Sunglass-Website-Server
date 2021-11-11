@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient } = require("mongodb");
+const objectId = require("mongodb").ObjectId;
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -79,6 +80,32 @@ async function run() {
       const addedProducts = await productsCollection.insertOne(newProducts);
       res.send(addedProducts);
     });
+    app.get("/allproducts", async (req, res) => {
+      const products = productsCollection.find({});
+      if ((await products.count()) > 0) {
+        res.send(await products.toArray());
+      } else {
+        res.send({});
+      }
+    });
+    app.delete("/deleteproduct/:id", verifyUserToken, async (req, res) => {
+      const adminEmail = req.decodedEmail;
+      const productId = objectId(req.params.id);
+      const findAdmin = await usersCollection.findOne({ email: adminEmail });
+      if (findAdmin?.role === "admin") {
+        const deleteProduct = await productsCollection.deleteOne({
+          _id: productId,
+        });
+        res.send(deleteProduct);
+      } else {
+        res.send(403);
+      }
+    });
+    app.get('/getproduct/:id',async(req,res)=>{
+      const productId = objectId(req.params.id);
+      const findProducts = await productsCollection.findOne({_id:productId});
+      res.send(findProducts);
+    })
   } finally {
   }
 }
