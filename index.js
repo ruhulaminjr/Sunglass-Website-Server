@@ -40,14 +40,11 @@ async function run() {
     await client.connect();
     const database = client.db("sunglassDb");
     const usersCollection = database.collection("users");
-    app.post("/adduser", verifyUserToken, async (req, res) => {
+    const productsCollection = database.collection("sunglassCollection");
+    app.post("/adduser", async (req, res) => {
       const newUser = req.body;
-      if (req.decodedEmail === req.body.email) {
-        const saveUsers = await usersCollection.insertOne(newUser);
-        res.send(saveUsers);
-      } else {
-        res.send(401);
-      }
+      const saveUsers = await usersCollection.insertOne(newUser);
+      res.send(saveUsers);
     });
     app.put("/makeadmin", verifyUserToken, async (req, res) => {
       const userEmail = req.body.email;
@@ -67,19 +64,20 @@ async function run() {
         res.send(401);
       }
     });
-    app.get("/checkadmin", verifyUserToken, async (req, res) => {
-      const userEmail = req.decodedEmail;
-      console.log("jwt auth", userEmail);
-      const adminResult = await usersCollection.findOne({
-        email: userEmail,
-      });
-      if (adminResult) {
-        if (adminResult.role === "admin") {
-          res.send({ admin: true });
-        } else {
-          res.send({ admin: "not have rule" });
-        }
+    app.get("/getAdmin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const getAdmin = await usersCollection.findOne(query);
+      let isAdmin = false;
+      if (getAdmin?.role === "admin") {
+        isAdmin = true;
       }
+      res.send({ admin: isAdmin });
+    });
+    app.post("/addproducts", async (req, res) => {
+      const newProducts = req.body;
+      const addedProducts = await productsCollection.insertOne(newProducts);
+      res.send(addedProducts);
     });
   } finally {
   }
