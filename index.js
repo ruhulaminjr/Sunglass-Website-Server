@@ -154,6 +154,59 @@ async function run() {
         res.status(401);
       }
     });
+    app.get("/review", async (req, res) => {
+      const allreview = reviewCollection.find({});
+      if ((await allreview.count()) > 0) {
+        res.send(await allreview.toArray());
+      } else {
+        res.send(404);
+      }
+    });
+    app.get("/getorders", verifyUserToken, async (req, res) => {
+      const reqUserEmail = req.decodedEmail;
+      const findUser = await usersCollection.findOne({
+        email: reqUserEmail,
+      });
+      if (findUser.role === "admin") {
+        const orders = await cartCollection.find({}).toArray();
+        res.send(orders);
+      } else {
+        res.status(401);
+      }
+    });
+    app.get("/approve/:id", verifyUserToken, async (req, res) => {
+      const reqUserEmail = req.decodedEmail;
+      const cartId = objectId(req.params.id);
+      const findUser = await usersCollection.findOne({
+        email: reqUserEmail,
+      });
+      if (findUser?.role === "admin") {
+        const filter = { _id: cartId };
+        const updateDoc = {
+          $set: {
+            status: "Shipped",
+          },
+        };
+        const updateCart = await cartCollection.updateOne(filter, updateDoc);
+        res.send(updateCart);
+      } else {
+        res.status(401);
+      }
+    });
+    app.delete("/deletecart/:id", verifyUserToken, async (req, res) => {
+      const reqUserEmail = req.decodedEmail;
+      const cartId = objectId(req.params.id);
+      const findUser = await usersCollection.findOne({
+        email: reqUserEmail,
+      });
+      if (findUser?.role === "admin") {
+        const filter = { _id: cartId };
+        const updateCart = await cartCollection.deleteOne(filter);
+        res.send(updateCart);
+      } else {
+        res.status(401);
+      }
+    });
   } finally {
   }
 }
