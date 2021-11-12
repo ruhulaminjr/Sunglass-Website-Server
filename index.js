@@ -42,6 +42,7 @@ async function run() {
     const database = client.db("sunglassDb");
     const usersCollection = database.collection("users");
     const productsCollection = database.collection("sunglassCollection");
+    const cartCollection = database.collection("SunglassCarts");
     app.post("/adduser", async (req, res) => {
       const newUser = req.body;
       const saveUsers = await usersCollection.insertOne(newUser);
@@ -98,14 +99,51 @@ async function run() {
         });
         res.send(deleteProduct);
       } else {
-        res.send(403);
+        res.status(403);
       }
     });
-    app.get('/getproduct/:id',async(req,res)=>{
-      const productId = objectId(req.params.id);
-      const findProducts = await productsCollection.findOne({_id:productId});
-      res.send(findProducts);
-    })
+    app.get("/getproduct/:id", verifyUserToken, async (req, res) => {
+      const verifyEmail = req.decodedEmail;
+      if (verifyEmail) {
+        const productId = objectId(req.params.id);
+        const findProducts = await productsCollection.findOne({
+          _id: productId,
+        });
+        res.send(findProducts);
+      } else {
+        res.status(401).json({ message: "Your Not Authorized" });
+      }
+    });
+    app.post("/savecarts", verifyUserToken, async (req, res) => {
+      const verifyEmail = req.decodedEmail;
+      const cart = req.body;
+      if (verifyEmail) {
+        const saveToCarts = await cartCollection.insertOne(cart);
+        res.send(saveToCarts);
+      } else {
+        res.status(401).json({ message: "Your Not Authorized" });
+      }
+    });
+    app.get("/myorders/:email", verifyUserToken, async (req, res) => {
+      const userEmail = req.params.email;
+      if (req.decodedEmail) {
+        const userOrders = await cartCollection
+          .find({ email: userEmail })
+          .toArray();
+        res.send(userOrders);
+      } else {
+        res.status(401).json({ message: "Unauthorized request" });
+      }
+    });
+    app.get("/cartdelete/:id", verifyUserToken, async (req, res) => {
+      const cartId = objectId(req.params.id);
+      if (req.decodedEmail) {
+        const deleteResult = await cartCollection.deleteOne({ _id: cartId });
+        res.send(deleteResult);
+      } else {
+        res.status(401).json({ message: "Unauthorized request" });
+      }
+    });
   } finally {
   }
 }
