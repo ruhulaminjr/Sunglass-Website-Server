@@ -43,6 +43,7 @@ async function run() {
     const usersCollection = database.collection("users");
     const productsCollection = database.collection("sunglassCollection");
     const cartCollection = database.collection("SunglassCarts");
+    const reviewCollection = database.collection("ReviewCollection");
     app.post("/adduser", async (req, res) => {
       const newUser = req.body;
       const saveUsers = await usersCollection.insertOne(newUser);
@@ -142,6 +143,15 @@ async function run() {
         res.send(deleteResult);
       } else {
         res.status(401).json({ message: "Unauthorized request" });
+      }
+    });
+    app.post("/addreview", verifyUserToken, async (req, res) => {
+      const review = req.body;
+      if (req.decodedEmail) {
+        const addReview = await reviewCollection.insertOne(review);
+        res.send(addReview);
+      } else {
+        res.status(401);
       }
     });
   } finally {
