@@ -69,6 +69,7 @@ async function run() {
     });
     app.get("/getAdmin/:email", async (req, res) => {
       const email = req.params.email;
+      console.log("hitted");
       const query = { email };
       const getAdmin = await usersCollection.findOne(query);
       let isAdmin = false;
